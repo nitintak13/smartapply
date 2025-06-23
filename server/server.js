@@ -29,19 +29,20 @@ app.get("/", (req, res) => res.send("API Working"));
 app.get("/debug-sentry", function mainHandler(req, res) {
   throw new Error("My first Sentry error!");
 });
-// app.post("/webhooks", clerkWebhooks);
-app.post(
-  "/webhooks",
-  bodyParser.raw({ type: "application/json" }),
-  clerkWebhooks
-);
+app.post("/webhooks", clerkWebhooks);
+
+// app.post(
+//   "/webhooks",
+//   bodyParser.raw({ type: "application/json" }),
+//   clerkWebhooks
+// );
 app.use("/api/company", companyRoutes);
 app.use("/api/jobs", jobRoutes);
 app.use("/api/users", userRoutes);
 
 const PORT = process.env.PORT || 5000;
 
-Sentry.setupExpressErrorHandler(app);
+// Sentry.setupExpressErrorHandler(app);
 
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
