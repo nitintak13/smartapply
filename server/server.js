@@ -10,8 +10,8 @@ import connectCloudinary from "./config/cloudinary.js";
 import jobRoutes from "./routes/jobRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
 import { clerkMiddleware } from "@clerk/express";
-import bodyParser from "body-parser";
-// Initialize Express
+import redis from "./config/redis.js";
+
 const app = express();
 
 // Connect to database
