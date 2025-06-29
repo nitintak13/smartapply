@@ -305,7 +305,7 @@ Please perform the following steps:
    - Specific roles, industries, and project exposure
 
 3. **Identify all strong matches** and **highlight every weak or missing area** from the resume in a professional tone. Be specific and factual.
- keep advice like roadmap what to do or not to do where to start short and concise bullet points learn these to get better score
+Keep advice like roadmap what to do or not to do where to start short and concise bullet points learn these to get better score
 
 Resume:
 ${userData.resumeText}
@@ -327,42 +327,46 @@ Advice:
 - [3–5 personalized, short, practical suggestions]
 `;
 
+      let text = "";
       try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 5000);
+
         const response = await ai.models.generateContent({
           model: "gemini-2.0-flash",
           contents: prompt,
+          signal: controller.signal,
         });
 
-        const text = response.text;
-        const match = text.match(/Match Score:\s*(\d+)/i);
-        const score = match ? parseInt(match[1], 10) : 0;
-
-        await redis.setex(`score:${userId}:${job._id}`, 24 * 60 * 60, text);
-
-        if (score < 60) {
-          await redis.setex(cooldownKey, 5 * 60 * 60, "true");
-          continue;
-        }
-
-        await JobApplication.create({
-          companyId: job.companyId,
-          userId,
-          jobId: job._id,
-          date: Date.now(),
-          matchScore: score,
-          aiAdvice: text.trim(),
-        });
-
-        await redis.zadd(
-          `job:${job._id}:applications`,
-          score,
-          `user:${userId}`
-        );
-
-        console.log(` Auto-applied to ${job.title}`);
+        clearTimeout(timeout);
+        text = response.text;
       } catch (err) {
-        console.error(" Auto-apply error:", err.message);
+        console.error("Timeout or Gemini Error:", err.message);
+        continue; // Skip this job if AI fails
       }
+
+      const match = text.match(/Match Score:\s*(\d+)/i);
+      const score = match ? parseInt(match[1], 10) : 0;
+
+      await redis.setex(`score:${userId}:${job._id}`, 24 * 60 * 60, text);
+
+      if (score < 60) {
+        await redis.setex(cooldownKey, 5 * 60 * 60, "true");
+        continue;
+      }
+
+      await JobApplication.create({
+        companyId: job.companyId,
+        userId,
+        jobId: job._id,
+        date: Date.now(),
+        matchScore: score,
+        aiAdvice: text.trim(),
+      });
+
+      await redis.zadd(`job:${job._id}:applications`, score, `user:${userId}`);
+
+      console.log(`Auto-applied to ${job.title}`);
     }
 
     return res.json({
@@ -371,7 +375,7 @@ Advice:
       resume: resumeUrl,
     });
   } catch (error) {
-    console.error(" updateUserResume error:", error);
+    console.error("updateUserResume error:", error);
     return res.json({ success: false, message: error.message });
   }
 };
