@@ -70,8 +70,16 @@ export const applyForJob = async (req, res) => {
     if (isBlocked) {
       const cachedAdvice = await redis.get(scoreCacheKey);
       const ttl = await redis.ttl(cooldownKey);
-      const match = cachedAdvice?.match(/Match Score:\s*(\d+)/i);
-      const score = match ? parseInt(match[1], 10) : null;
+      console.log("🎯 Raw AI output:\n", text);
+
+      let match = text.match(/Match Score:\s*(\d{1,3})/i);
+      if (!match) {
+        match = text.match(/(\d{1,3})\s*\/\s*100/);
+      }
+      const score = match ? parseInt(match[1], 10) : 0;
+      console.log("🏷 Parsed score:", score);
+      // const match = cachedAdvice?.match(/Match Score:\s*(\d+)/i);
+      // const score = match ? parseInt(match[1], 10) : null;
       const expiryTimestamp = Date.now() + ttl * 1000;
 
       return res.json({
@@ -326,7 +334,7 @@ Missing or Weak Areas:
 Advice:
 - [3–5 personalized, short, practical suggestions]
 `;
-
+      console.log(`🔥 Calling Gemini for user ${userId}, job ${jobId}`);
       let text = "";
       try {
         const controller = new AbortController();
@@ -339,10 +347,15 @@ Advice:
         });
 
         clearTimeout(timeout);
-        text = response.text;
+        text = response.text || "";
+        console.log(`✅ Gemini returned (${text.length} chars)`);
       } catch (err) {
-        console.error("Timeout or Gemini Error:", err.message);
-        continue; // Skip this job if AI fails
+        console.error("⛔ Gemini call failed or timed out:", err.message);
+        // Fail early or fallback:
+        return res.json({
+          success: false,
+          message: "AI scoring unavailable, please try again later.",
+        });
       }
 
       const match = text.match(/Match Score:\s*(\d+)/i);
