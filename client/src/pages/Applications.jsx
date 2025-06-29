@@ -1,20 +1,21 @@
 import { useContext, useEffect, useState } from "react";
-import Navbar from "../components/Navbar";
-import { assets } from "../assets/assets";
-import moment from "moment";
-import Footer from "../components/Footer";
-import { AppContext } from "../context/AppContext";
 import { useAuth, useUser } from "@clerk/clerk-react";
 import axios from "axios";
+import moment from "moment";
 import { toast } from "react-toastify";
+
+import Navbar from "../components/Navbar";
+import Footer from "../components/Footer";
 import Loading from "../components/Loading";
+import { AppContext } from "../context/AppContext";
+import { assets } from "../assets/assets";
 
 const Applications = () => {
   const { user } = useUser();
   const { getToken } = useAuth();
-
   const [isEdit, setIsEdit] = useState(false);
   const [resume, setResume] = useState(null);
+  const [openFeedbackIndex, setOpenFeedbackIndex] = useState(null);
 
   const {
     backendUrl,
@@ -28,11 +29,10 @@ const Applications = () => {
     try {
       const formData = new FormData();
       formData.append("resume", resume);
-
       const token = await getToken();
 
       const { data } = await axios.post(
-        backendUrl + "/api/users/update-resume",
+        `${backendUrl}/api/users/update-resume`,
         formData,
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -43,143 +43,177 @@ const Applications = () => {
       } else {
         toast.error(data.message);
       }
-    } catch (error) {
-      toast.error(error.message);
-    }
 
-    setIsEdit(false);
-    setResume(null);
+      setIsEdit(false);
+      setResume(null);
+    } catch {
+      toast.error("Error updating resume.");
+    }
   };
 
   useEffect(() => {
-    if (user) {
-      fetchUserApplications();
-    }
+    if (user) fetchUserApplications();
   }, [user]);
 
-  return userData ? (
+  if (!userData) return <Loading />;
+
+  return (
     <>
       <Navbar />
-      <div className="container px-4 min-h-[65vh] 2xl:px-20 mx-auto my-10">
-        <h2 className="text-xl font-semibold">Your Resume</h2>
-        <div className="flex gap-2 mb-6 mt-3">
-          {isEdit || (userData && userData.resume === "") ? (
+      <div className="max-w-5xl mx-auto px-4 py-8">
+        <h2 className="text-xl font-medium mb-4">Your Resume</h2>
+        <div className="flex items-center gap-3 mb-8">
+          {isEdit || !userData.resume ? (
             <>
-              <label className="flex items-center" htmlFor="resumeUpload">
-                <p className="bg-blue-100 text-blue-600 px-4 py-2 rounded-lg mr-2">
-                  {resume ? resume.name : "Select Resume"}
+              <label
+                htmlFor="resumeUpload"
+                className="flex items-center gap-2 cursor-pointer"
+              >
+                <p className="bg-gray-100 text-gray-700 px-3 py-1 rounded">
+                  {resume ? resume.name : "Choose PDF"}
                 </p>
                 <input
                   id="resumeUpload"
-                  onChange={(e) => setResume(e.target.files[0])}
-                  accept="application/pdf"
                   type="file"
+                  accept="application/pdf"
                   hidden
+                  onChange={(e) => setResume(e.target.files[0])}
                 />
-                <img src={assets.profile_upload_icon} alt="" />
+                <img
+                  src={assets.profile_upload_icon}
+                  alt="upload"
+                  className="w-5"
+                />
               </label>
               <button
                 onClick={updateResume}
-                className="bg-green-100 border border-green-400 rounded-lg px-4 py-2"
+                className="px-3 py-1 text-sm bg-green-200 text-green-800 rounded"
               >
                 Save
               </button>
             </>
           ) : (
-            <div className="flex gap-2">
+            <>
               <a
-                target="_blank"
                 href={userData.resume}
-                className="bg-blue-100 text-blue-600 px-4 py-2 rounded-lg"
+                target="_blank"
+                rel="noreferrer"
+                className="px-3 py-1 bg-blue-100 text-blue-600 rounded text-sm"
               >
-                Resume
+                View Resume
               </a>
               <button
                 onClick={() => setIsEdit(true)}
-                className="text-gray-500 border border-gray-300 rounded-lg px-4 py-2"
+                className="px-3 py-1 border text-gray-700 rounded text-sm"
               >
                 Edit
               </button>
-            </div>
+            </>
           )}
         </div>
 
-        <h2 className="text-xl font-semibold mb-4">Jobs Applied</h2>
-        <table className="min-w-full bg-white border rounded-lg">
-          <thead>
-            <tr>
-              <th className="py-3 px-4 border-b text-left">Company</th>
-              <th className="py-3 px-4 border-b text-left">Job Title</th>
-              <th className="py-3 px-4 border-b text-left max-sm:hidden">
-                Location
-              </th>
-              <th className="py-3 px-4 border-b text-left max-sm:hidden">
-                Date
-              </th>
-              <th className="py-3 px-4 border-b text-left">Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {userApplications.map((job, index) => (
-              <tr key={index}>
-                <td className="py-3 px-4 flex items-center gap-2 border-b">
-                  <img className="w-8 h-8" src={job.companyId.image} alt="" />
-                  {job.companyId.name}
-                </td>
-                <td className="py-2 px-4 border-b">{job.jobId.title}</td>
-                <td className="py-2 px-4 border-b max-sm:hidden">
-                  {job.jobId.location}
-                </td>
-                <td className="py-2 px-4 border-b max-sm:hidden">
-                  {moment(job.date).format("ll")}
-                </td>
-                <td className="py-2 px-4 border-b">
-                  <span
-                    className={`${
-                      job.status === "Accepted"
-                        ? "bg-green-100"
-                        : job.status === "Rejected"
-                        ? "bg-red-100"
-                        : "bg-blue-100"
-                    } px-4 py-1.5 rounded`}
-                  >
-                    {job.status}
-                  </span>
-                </td>
+        <h2 className="text-xl font-medium mb-4">Jobs Applied</h2>
+        <div className="overflow-x-auto">
+          <table className="w-full bg-white border">
+            <thead>
+              <tr className="bg-gray-50 text-sm">
+                <th className="px-4 py-2 text-left">Company</th>
+                <th className="px-4 py-2 text-left">Title</th>
+                <th className="px-4 py-2 text-left hidden sm:table-cell">
+                  Location
+                </th>
+                <th className="px-4 py-2 text-left hidden sm:table-cell">
+                  Date
+                </th>
+                <th className="px-4 py-2 text-left">Status</th>
+                <th className="px-4 py-2 text-left">Fit</th>
+                <th className="px-4 py-2 text-left">Feedback</th>
               </tr>
-            ))}
+            </thead>
+            <tbody>
+              {userApplications
+                .filter((app) => app?.jobId && app?.companyId)
+                .map((app, idx) => (
+                  <tr key={idx} className="border-t text-sm">
+                    <td className="px-4 py-2 flex items-center gap-2">
+                      <img
+                        src={app.companyId?.image || assets.default_avatar}
+                        alt="company"
+                        className="w-6 h-6 rounded-full"
+                      />
+                      {app.companyId?.name}
+                    </td>
+                    <td className="px-4 py-2">{app.jobId?.title}</td>
+                    <td className="px-4 py-2 hidden sm:table-cell">
+                      {app.jobId?.location}
+                    </td>
+                    <td className="px-4 py-2 hidden sm:table-cell">
+                      {moment(app.date).format("ll")}
+                    </td>
+                    <td className="px-4 py-2">
+                      <span
+                        className={`px-2 py-1 rounded text-xs ${
+                          app.status === "Accepted"
+                            ? "bg-green-100 text-green-700"
+                            : app.status === "Rejected"
+                            ? "bg-red-100 text-red-700"
+                            : "bg-yellow-100 text-yellow-700"
+                        }`}
+                      >
+                        {app.status}
+                      </span>
+                    </td>
+                    <td className="px-4 py-2">
+                      {app.matchScore ? (
+                        <span
+                          className={`text-xs px-2 py-1 rounded ${
+                            app.matchScore >= 60
+                              ? "bg-green-50 text-green-700"
+                              : "bg-red-50 text-red-700"
+                          }`}
+                        >
+                          {app.matchScore}/100
+                        </span>
+                      ) : (
+                        <span className="text-gray-400 text-xs">—</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-2">
+                      {app.matchScore && app.aiAdvice ? (
+                        <button
+                          onClick={() =>
+                            setOpenFeedbackIndex(
+                              openFeedbackIndex === idx ? null : idx
+                            )
+                          }
+                          className="text-blue-600 text-xs underline"
+                        >
+                          {openFeedbackIndex === idx ? "Hide" : "View"}
+                        </button>
+                      ) : (
+                        <span className="text-gray-400 text-xs">—</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+            </tbody>
+          </table>
+        </div>
 
-            {/* Show Gemini insights below each job if available */}
-            {userApplications.map((job, index) =>
-              job.matchScore || job.geminiAdvice ? (
-                <tr key={`insight-${index}`}>
-                  <td colSpan={5} className="bg-gray-50 border-b px-6 py-4">
-                    <div className="bg-white border rounded-lg p-4 shadow-sm">
-                      <h4 className="font-semibold text-gray-700 mb-2">
-                        🧠 Gemini Insights
-                      </h4>
-                      {job.matchScore && (
-                        <p className="text-sm text-gray-800 mb-1">
-                          <strong>Match Score:</strong> {job.matchScore}%
-                        </p>
-                      )}
-                      {job.geminiAdvice && (
-                        <p className="text-sm text-gray-600 italic">
-                          <strong>Advice:</strong> {job.geminiAdvice}
-                        </p>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ) : null
-            )}
-          </tbody>
-        </table>
+        {userApplications.map((app, idx) =>
+          openFeedbackIndex === idx ? (
+            <div
+              key={`feedback-${idx}`}
+              className="mt-4 p-4 bg-yellow-50 border text-sm rounded whitespace-pre-line"
+            >
+              <strong>Score:</strong> {app.matchScore}/100
+              <p className="mt-2">{app.aiAdvice}</p>
+            </div>
+          ) : null
+        )}
       </div>
       <Footer />
     </>
-  ) : (
-    <Loading />
   );
 };
 
