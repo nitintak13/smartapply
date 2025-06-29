@@ -13,14 +13,13 @@ const app = express();
 
 connectDB();
 await connectCloudinary();
-app.use(
-  cors({
-    origin: "*",
-    credentials: true,
-  })
-);
+const corsOptions = {
+  origin: "https://smart-apply-indol.vercel.app",
+  credentials: true,
+};
+app.options("*", cors(corsOptions));
 
-app.use(cors());
+app.use(cors(corsOptions));
 app.use(express.json());
 app.post(
   "/webhooks",
