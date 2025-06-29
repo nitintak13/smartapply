@@ -78,8 +78,8 @@ export const applyForJob = async (req, res) => {
       }
       const score = match ? parseInt(match[1], 10) : 0;
       console.log("🏷 Parsed score:", score);
-      // const match = cachedAdvice?.match(/Match Score:\s*(\d+)/i);
-      // const score = match ? parseInt(match[1], 10) : null;
+      const match = cachedAdvice?.match(/Match Score:\s*(\d+)/i);
+      const score = match ? parseInt(match[1], 10) : null;
       const expiryTimestamp = Date.now() + ttl * 1000;
 
       return res.json({
@@ -151,9 +151,14 @@ Please respond ONLY using the required format. Do not generate any extra comment
     });
 
     const text = response.text;
-    const match = text.match(/Match Score:\s*(\d+)/i);
-    const score = match ? parseInt(match[1].trim(), 10) : 0;
+    console.log("🎯 Raw AI output:\n", text);
 
+    let match = text.match(/Match Score:\s*(\d{1,3})/i);
+    if (!match) {
+      match = text.match(/(\d{1,3})\s*\/\s*100/);
+    }
+    const score = match ? parseInt(match[1], 10) : 0;
+    console.log("🏷 Parsed score:", score);
     // Cache score & advice
     await redis.setex(scoreCacheKey, 24 * 60 * 60, text);
 
