@@ -14,7 +14,7 @@ const app = express();
 connectDB();
 await connectCloudinary();
 const corsOptions = {
-  origin: "https://smart-apply-indol.vercel.app",
+  origin: "https://smartapply-ai-6nuc.onrender.com",
   credentials: true,
 };
 app.options("*", cors(corsOptions));
