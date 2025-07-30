@@ -7,7 +7,6 @@ import redis from "../config/redis.js";
 import { GoogleGenAI } from "@google/genai";
 import { clerkClient } from "@clerk/clerk-sdk-node";
 
-// Initialize Gemini AI
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 export const getUserData = async (req, res) => {
@@ -25,12 +24,10 @@ export const getUserData = async (req, res) => {
         resume: "",
         resumeText: "",
       });
-      console.log(`Inserted new User(${userId}) from Clerk Admin API`);
     }
 
     return res.json({ success: true, user });
   } catch (err) {
-    console.error("getUserData error:", err);
     return res.json({ success: false, message: err.message });
   }
 };
@@ -40,7 +37,7 @@ export const applyForJob = async (req, res) => {
   const userId = req.auth.userId;
 
   const rateLimitKey = `rate:user:${userId}`;
-  const rateLimit = 5;
+  const rateLimit = 15;
   const windowSec = 60 * 60;
 
   const attempts = await redis.incr(rateLimitKey);
@@ -143,24 +140,17 @@ Please respond ONLY using the required format. Do not generate any extra comment
     });
 
     const text = response.text;
-    console.log("🎯 Raw AI output:\n", text);
-
     let match = text.match(/Match Score:\s*(\d{1,3})/i);
     if (!match) {
       match = text.match(/(\d{1,3})\s*\/\s*100/);
     }
     const score = match ? parseInt(match[1], 10) : 0;
-    console.log("🏷 Parsed score:", score);
-    // Cache score & advice
     await redis.setex(scoreCacheKey, 24 * 60 * 60, text);
 
     if (score < 60) {
-      const ttl = 5 * 60 * 60; // 5 hours
+      const ttl = 5 * 60 * 60;
       await redis.setex(cooldownKey, ttl, "true");
       const expiryTimestamp = Date.now() + ttl * 1000;
-      // console.log(
-      //   `Cooldown applied for user ${userId} on job ${jobId} (score: ${score})`
-      // );
       return res.json({
         success: true,
         blocked: true,
@@ -177,7 +167,7 @@ Please respond ONLY using the required format. Do not generate any extra comment
       return res.json({
         success: false,
         rateLimited: true,
-        message: "You've reached your hourly apply limit.",
+        message: "You've reached your apply limit.",
       });
     }
 
@@ -331,7 +321,7 @@ Missing or Weak Areas:
 Advice:
 - [3–5 personalized, short, practical suggestions]
 `;
-      console.log(`🔥 Calling Gemini for user ${userId}, job ${jobId}`);
+
       let text = "";
       try {
         const controller = new AbortController();
@@ -345,10 +335,8 @@ Advice:
 
         clearTimeout(timeout);
         text = response.text || "";
-        console.log(`✅ Gemini returned (${text.length} chars)`);
       } catch (err) {
-        console.error("⛔ Gemini call failed or timed out:", err.message);
-        // Fail early or fallback:
+        console.error("Gemini call failed or timed out:", err.message);
         return res.json({
           success: false,
           message: "AI scoring unavailable, please try again later.",
@@ -375,8 +363,6 @@ Advice:
       });
 
       await redis.zadd(`job:${job._id}:applications`, score, `user:${userId}`);
-
-      console.log(`Auto-applied to ${job.title}`);
     }
 
     return res.json({
