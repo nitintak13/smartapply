@@ -7,7 +7,7 @@ export const AppContext = createContext()
 
 export const AppContextProvider = (props) => {
 
-    const backendUrl = import.meta.env.VITE_BACKEND_URL
+    const backendUrl = "https://smartapply-sjey.onrender.com";
 
     const { user } = useUser()
     const { getToken } = useAuth()
