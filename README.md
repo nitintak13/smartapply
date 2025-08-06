@@ -18,10 +18,6 @@
   - Compares your resume to the job description.
   - Gemini generates detailed suggestions to improve your resume.
 
-- 🧊 **Cooldown System (Redis TTL)**
-
-  - If your fit score is **below 60**, a **5-hour cooldown** is activated.
-  - Prevents repeated low-fit attempts with the same resume.
 
 - ⚡ **Fast Rechecks with Redis**
 
@@ -30,7 +26,7 @@
 - 📛 **Resume Upload + Parsing**
 
   - Upload a resume (PDF) → Parsed using `pdf-parse` → Text stored for AI.
-  - Resume updates automatically **clear old cache & cooldown** in Redis.
+  - Resume updates automatically **clear old cache ** in Redis.
 
 - 🚫 **Rate Limiting**
 
