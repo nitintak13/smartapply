@@ -6,8 +6,29 @@ import generateToken from "../utils/generateToken.js";
 import Job from "../models/Job.js";
 import JobApplication from "../models/JobApplication.js";
 import User from "../models/User.js";
+import streamifier from "streamifier";
 import { GoogleGenAI } from "@google/genai";
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+
+
+
+const streamUpload = (req) => {
+  return new Promise((resolve, reject) => {
+    console.log("req.file:", req.file);
+
+    if (!req.file || !req.file.buffer) {
+      return res
+        .status(400)
+        .json({ success: false, message: "No file uploaded" });
+    }
+
+    const stream = cloudinary.uploader.upload_stream((error, result) => {
+      if (result) resolve(result);
+      else reject(error);
+    });
+    streamifier.createReadStream(req.file.buffer).pipe(stream);
+  });
+};
 export const registerCompany = async (req, res) => {
   const { name, email, password } = req.body;
   const imageFile = req.file;
@@ -26,7 +47,7 @@ export const registerCompany = async (req, res) => {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    const imageUpload = await cloudinary.uploader.upload(imageFile.path);
+    const imageUpload = await streamUpload(req);
 
     const company = await Company.create({
       name,
@@ -49,6 +70,50 @@ export const registerCompany = async (req, res) => {
     res.json({ success: false, message: error.message });
   }
 };
+
+
+
+// export const registerCompany = async (req, res) => {
+//   const { name, email, password } = req.body;
+//   const imageFile = req.file;
+
+//   if (!name || !email || !password || !imageFile) {
+//     return res.json({ success: false, message: "Missing Details" });
+//   }
+
+//   try {
+//     const exists = await Company.findOne({ email });
+//     if (exists) {
+//       return res.json({
+//         success: false,
+//         message: "Company already registered",
+//       });
+//     }
+
+//     const hashedPassword = await bcrypt.hash(password, 10);
+//     const imageUpload = await cloudinary.uploader.upload(imageFile.path);
+
+//     const company = await Company.create({
+//       name,
+//       email,
+//       password: hashedPassword,
+//       image: imageUpload.secure_url,
+//     });
+
+//     res.json({
+//       success: true,
+//       company: {
+//         _id: company._id,
+//         name: company.name,
+//         email: company.email,
+//         image: company.image,
+//       },
+//       token: generateToken(company._id),
+//     });
+//   } catch (error) {
+//     res.json({ success: false, message: error.message });
+//   }
+// };
 
 // Login
 export const loginCompany = async (req, res) => {
