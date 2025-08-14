@@ -12,7 +12,7 @@ const jobSchema = new mongoose.Schema({
     companyId: { type: mongoose.Schema.Types.ObjectId, ref: 'Company', required: true }
 })
 
-jobSchema.index({ title: 1, companyId: 1, date: 1 }, { unique: true });
+// jobSchema.index({ title: 1, companyId: 1, date: 1 }, { unique: true });
 
 const Job = mongoose.model('Job', jobSchema)
 
