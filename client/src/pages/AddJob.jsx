@@ -11,6 +11,7 @@ const AddJob = () => {
   const [category, setCategory] = useState("Programming");
   const [level, setLevel] = useState("Beginner level");
   const [salary, setSalary] = useState(0);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const editorRef = useRef(null);
   const quillRef = useRef(null);
@@ -19,6 +20,9 @@ const AddJob = () => {
 
   const onSubmitHandler = async (e) => {
     e.preventDefault();
+
+    if (isSubmitting) return; // Prevent accidental double submit
+    setIsSubmitting(true);
 
     try {
       const description = quillRef.current.root.innerHTML;
@@ -39,6 +43,8 @@ const AddJob = () => {
       }
     } catch (error) {
       toast.error(error.message);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -138,8 +144,9 @@ const AddJob = () => {
       <button
         type="submit"
         className="mt-4 bg-black text-white py-2 px-5 rounded"
+        disabled={isSubmitting}
       >
-        Add
+        {isSubmitting ? "Posting..." : "Add"}
       </button>
     </form>
   );
