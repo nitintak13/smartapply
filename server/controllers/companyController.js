@@ -153,6 +153,22 @@ export const postJob = async (req, res) => {
     const { title, description, location, salary, level, category } = req.body;
     const companyId = req.company._id;
 
+    const existingJob = await Job.findOne({
+      title,
+      companyId,
+      date: {
+        $gte: new Date(new Date().setHours(0, 0, 0, 0)), // same day
+        $lt: new Date(new Date().setHours(23, 59, 59, 999)),
+      },
+    });
+
+    if (existingJob) {
+      return res.status(409).json({
+        success: false,
+        message: "This job has already been posted today.",
+      });
+    }
+
     const newJob = await Job.create({
       title,
       description,
